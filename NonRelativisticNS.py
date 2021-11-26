@@ -8,7 +8,7 @@ Created on Thu Nov 18 15:47:45 2021
 #selezione eq stato
 from project.eqs_state import Polytropic
 from project.NSclass import NeutronStar as ns
-from project.solve import *
+#from project.solve import *
 
 
 

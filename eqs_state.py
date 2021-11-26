@@ -5,33 +5,61 @@ Created on Fri Nov 19 12:13:14 2021
 @author: cosmo
 """
 
-class eqs_state:
+#class Implicit:
     
-    eos = ""
-    rs = 0
     
-    #def __init__(self, kind, rho_s):
-        #if kind != "a","b","c": mettere error
-        #self.eos = kind
-        #self.rs = rho_s
-      
-    def select():
-        eqs_state.eos = input("Che eq voui? a: b: c: ") 
-        eqs_state.rs = float(input("Che valore iniziale voui?"))
-        #print(eqs_state.rs)
+    
+class Polytropic:
+    
+    
+    def __init__(self, k, gamma):
+        self.kind = "PressureEnergyDensityPolytropic"
+        self.k = k
+        self.gamma = gamma
         
-    def density_calc(pres):
-        if eqs_state.eos == "prima":
-            n = (pres/363.44)**(1/2.54)
-            rho = 236*n**2.54+n*938
+    def energy_density(self, pres):
+        en_den = (pres/self.k)**(1/self.gamma)
+        return en_den
         
-        elif eqs_state.eos == "seconda":
-            n = 4*pres
-            rho = 45*n
-            
-        return rho
+
+class Piecewise:
+ 
+
+
+#going from the core to the outside
+
     
-    def central_density():
-        #print(eqs_state.rs)
-        return eqs_state.rs
+    def __init__(self, trans_density, core_gammas, rhoCentral = "bho"): #gammas = gamma1,gamma2,gamma3
+        self.kind = "PressureEnergyDensityPiecewise"
+        self.gammas = [core_gammas, gammaSly3, gammaSLy2, gammaSly1, gammaSly0]
+        self.rhos = [rhoCentral, rho3, rho2, trans_density, rhoSly3, rhoSly2, rhoSly1]
+        self.kappas = [kSly3, kSly2, kSly1, kSly0]
+        
+    def BuildK(self):
+        for i in range(2, 0, -1):
+            new_k = self.PressureFromDensity(self.rhos[i+1])/(self.rhos[i+1]**self.gammas[i])
+            self.kappas.insert(0,new_k)
+        
+    def PressureFromDensity(self, density):
+        i=-1
+        while density < self.rhos[i]:
+            i+=1
+        return self.kappas[i]*density**self.gammas[i]
+        
+        
+        
+"""
+6 -> gammaSLy0, kSly0, rhoSly1
+5 -> gammaSLy1, kSly1, rhoSly2
+4 -> gammaSLy2, kSly2, rhoSly3
+3 -> gammaSLy3, kSly3, trans_density
+2 -> gamma1, k1, rho2
+1 -> gamma2, k2, rho3
+0 -> gamma3, k3, rhoCentral
+"""        
+        
+        
+        
+        
+        
         

@@ -4,32 +4,43 @@ Created on Thu Nov 18 16:09:43 2021
 
 @author: cosmo
 """
-def solve():
-    import numpy as np
-    from project.eqs_state import eqs_state
-    
-    def step_comp(f, u, t, dt, rho, m=""):
+import numpy as np
+import project.eqs_state as es
+#from project.NSclass import NeutronStar as ns
+
+
+def step_comp(f, t, dt, u, v):
         
-        g0 = f(u, t, rho, m)    
-        g1 = f(u + 0.5*dt*g0, t+0.5*dt, rho, m)    
-        g2 = f(u + 0.5*dt*g1, t+0.5*dt, rho, m)    
-        g3 = f(u + dt*g2, t+dt, rho, m)
-            
-        return (1/6)*dt*(g0 + 2*g1 + 2*g2 + g3)
+    k1 = f(t, u, v)
+    k2 = f(t + dt/4, u + dt*k1[0]/4, v + dt*k1[1]/4)
+    k3 = f(t + 3*dt/8, u + 3*dt*k1[0]/32 + 9*dt*k2[0]/32, v + 3*dt*k1[1]/32 + 9*dt*k2[1]/32)
+    k4 = f(t + 12*dt/13, u + 1932*dt*k1[0]/2197 - 7200*dt*k2[0]/2197 + 7296*dt*k3[0]/2197, v + 1932*dt*k1[1]/2197 - 7200*dt*k2[1]/2197 + 7296*dt*k3[1]/2197)
+    k5 = f(t + dt, u + 439*dt*k1[0]/216 - 8*dt*k2[0] + 3680*dt*k3[0]/513 - 845*dt*k4[0]/4104, v + 439*dt*k1[1]/216 - 8*dt*k2[1] + 3680*dt*k3[1]/513 - 845*dt*k4[1]/4104)
+    k6 = f(t + dt/2, u - 8*dt*k1[0]/27 + 2*dt*k2[0] -3544*dt*k3[0]/2565 + 1859*dt*k4[0]/4104 -11*dt*k5[0]/40, v - 8*dt*k1[1]/27 + 2*dt*k2[1] -3544*dt*k3[1]/2565 + 1859*dt*k4[1]/4104 -11*dt*k5[1]/40)
         
-    def rk4(f, u, t, dt, csi, rho, m=""):
+    du = 25*k1[0]/216 + 1408*k3[0]/2565 + 2197*k4[0]/4104 - k5[0]/5
+    dv = 25*k1[1]/216 + 1408*k3[1]/2565 + 2197*k4[1]/4104 - k5[1]/5
+    return [du, dv]
+    
+def rk4(f, t, u, v, dt, csi):
+    
+    y1 = step_comp(f, t, dt, u, v) 
+    y2 = step_comp(f, t, dt/2, u, v)
+    err = max(abs((y1[0] - y2[0])/15), abs((y1[0] - y2[0])/15)) 
+    if err != 0:
+        new_step = dt*(csi/err)**(0.2)
+        if new_step < dt:
+            dt = new_step
+            y1 = step_comp(f, t, dt, u, v) 
+                
+        else:
+            dt = new_step
         
-        y1 = step_comp(f, u, t, dt, rho, m) 
-        if f==func2:
-            y2 = step_comp(f, u, t, dt/2, rho, m)
-            err = abs((y1 - y2)/15) 
-            if err != 0:
-                dt = dt*(csi/err)**(0.2)
-            
-        return y1
-    
-    
-    rho = eqs_state.central_density()
+    return y1
+
+def solve(eq_type, central_value, eq_state):
+      
+    rho = 1
     #print(rho)
     step = 0.001
     csi = 0.001
@@ -39,14 +50,19 @@ def solve():
     pres = np.array([rho])
     radius = np.array([csi])
     
+    """if eq_type == "Newton":
+        func = ns.Newton_eqs
+    elif eq_type == "TOV":
+        func = ns.TOV_eqs"""
     
     i=0
     while(pres[i] > 0):
         print("Ciclo ", i)
-        mass = np.append(mass, mass[i] + rk4(func1, mass[i], radius[i], step, csi, rho))
-        pres = np.append(pres, pres[i] + rk4(func2, pres[i], radius[i], step, csi, rho, mass[i]))
+        dy = rk4(eq_type, radius[i], mass[i], pres[i], step, csi)
+        mass = np.append(mass, mass[i] + dy[0])
+        pres = np.append(pres, pres[i] + dy[1])
         radius = np.append(radius, radius[i]+step)
-        rho = eqs_state.density_calc(pres[i])
+        rho = eq_state.energy_density(pres[i])
         
         if pres[i+1] < 0:
             #print("R= ", radius[i])
@@ -62,8 +78,11 @@ def solve():
     
     return radius,mass,pres
 
-def func1(y, r, rho, mass):
+"""def func1(y, r, rho, mass):
     return rho*r**2
     
 def func2(y, r, rho, mass):
     return -mass*rho*r**(-2)
+
+def func2rel(y, r, rho, mass, pres):
+    return G*mass*rho*r**(-2)*(1+pres/(rho*c**2))*(1+4*np.pi*r**3*pres/(mass*c**2))*(1-2*G*mass/(r*c**2))**(-1)"""
