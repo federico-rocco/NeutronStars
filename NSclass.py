@@ -6,7 +6,6 @@ Created on Mon Nov 22 19:02:16 2021
 """
 
 import numpy as np
-import project.eqs_state
 from project.solve import solve
 
 def CGS_converter(a):

@@ -5,8 +5,7 @@ Created on Thu Nov 18 16:09:43 2021
 @author: cosmo
 """
 import numpy as np
-import project.eqs_state as es
-#from project.NSclass import NeutronStar as ns
+
 
 
 def step_comp(f, t, dt, u, v):
@@ -78,11 +77,18 @@ def solve(eq_type, central_value, eq_state):
     
     return radius,mass,pres
 
-"""def func1(y, r, rho, mass):
-    return rho*r**2
-    
-def func2(y, r, rho, mass):
-    return -mass*rho*r**(-2)
-
-def func2rel(y, r, rho, mass, pres):
-    return G*mass*rho*r**(-2)*(1+pres/(rho*c**2))*(1+4*np.pi*r**3*pres/(mass*c**2))*(1-2*G*mass/(r*c**2))**(-1)"""
+def bisection(f, xL, xR, guess):
+    fL = f(xL)- guess
+    xM = (xL + xR)/2.0
+    fM = f(xM) - guess
+    epsilon = 10**(-10)
+    while abs(fM) > epsilon:
+        xM = (xL + xR)/2.0
+        if fL*fM > 0: 
+            xL = xM
+            fL = fM
+        else:
+            xR = xM
+        xM = (xL + xR)/2.0
+        fM = f(xM) - guess
+    return xM
