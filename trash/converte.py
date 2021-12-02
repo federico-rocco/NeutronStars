@@ -4,7 +4,7 @@ c = 3*10**(10)
 
 G = 6.67*10**(-7)
 
-M_sun = 2*10**(33)
+
 
 def from_cgs_to_geo(quantity, value):
     if quantity == "mass":
@@ -35,6 +35,7 @@ def from_geo_to_cgs(quantity, value):
         raise ValueError("Need to choose \"mass\" or \"massden\" or \"energy\" or \"eden\" or \"pressure\"")
 
 def mass_conv(m):
+    M_sun = 2*10**(33)
     m = m/M_sun
     return m
 

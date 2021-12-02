@@ -1,30 +1,29 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Nov 18 15:47:45 2021
+Created on Wed Dec  1 12:19:57 2021
 
 @author: cosmo
 """
 
 #selezione eq stato
-from project.eqs_state import Polytropic
+from project.eqs_state import Implicit
 from project.NSclass import NeutronStar as ns
+from utils import cgs_geom_dictionary
 
 
 
 #creazione equazione di stato
-k = 6.483e-26
-gamma = 5/3
-chosen_state = Polytropic(k, gamma)
-
+chosen_state = Implicit()
+print("eos made")
 #creazione stella
-star = ns("NonrelPureNS", chosen_state)
+star = ns("RelPureNS", chosen_state)
 
 #soluzione sistema
-cv = 1.603e33 
-print("k=",k,"eden centrale=",cv)
+cv = 3.5*10**35
 r_newton,m_newton,p_newton = star.star_solver(star.Newton_eqs, cv)
 r_TOV,m_TOV,p_TOV = star.star_solver(star.TOV_eqs, cv)
 iterations = r_newton.size
+
 print("Newton:", iterations, " iterations executed; mass = ", m_newton[-1],"solar masses; total radius =", r_newton[-1], "km")
 R_newton = r_newton[-1]
 M_newton= m_newton[-1]
