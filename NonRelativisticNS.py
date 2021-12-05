@@ -15,15 +15,16 @@ from project.NSclass import NeutronStar as ns
 k = 6.483e-26
 gamma = 5/3
 chosen_state = Polytropic(k, gamma)
+print("eos made")
 
 #creazione stella
 star = ns("NonrelPureNS", chosen_state)
 
 #soluzione sistema
 cv = 1.603e33 
-print("k=",k,"eden centrale=",cv)
-r_newton,m_newton,p_newton = star.star_solver(star.Newton_eqs, cv)
-r_TOV,m_TOV,p_TOV = star.star_solver(star.TOV_eqs, cv)
+r_newton,m_newton,p_newton = star.star_solver(star.Newton_eqs, cv, value_type="pressure", unit_type="cgs")
+r_TOV,m_TOV,p_TOV = star.star_solver(star.TOV_eqs, cv, value_type="pressure", unit_type="cgs")
+
 iterations = r_newton.size
 print("Newton:", iterations, " iterations executed; mass = ", m_newton[-1],"solar masses; total radius =", r_newton[-1], "km")
 R_newton = r_newton[-1]

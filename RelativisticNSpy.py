@@ -15,15 +15,16 @@ from utils import cgs_geom_dictionary
 #creazione equazione di stato
 chosen_state = Implicit()
 print("eos made")
+
 #creazione stella
 star = ns("RelPureNS", chosen_state)
 
 #soluzione sistema
 cv = 3.5*10**35
-r_newton,m_newton,p_newton = star.star_solver(star.Newton_eqs, cv)
-r_TOV,m_TOV,p_TOV = star.star_solver(star.TOV_eqs, cv)
-iterations = r_newton.size
+r_newton,m_newton,p_newton = star.star_solver(star.Newton_eqs, cv, value_type="pressure", unit_type="cgs")
+r_TOV,m_TOV,p_TOV = star.star_solver(star.TOV_eqs, cv, value_type="pressure", unit_type="cgs")
 
+iterations = r_newton.size
 print("Newton:", iterations, " iterations executed; mass = ", m_newton[-1],"solar masses; total radius =", r_newton[-1], "km")
 R_newton = r_newton[-1]
 M_newton= m_newton[-1]
@@ -40,7 +41,7 @@ import matplotlib.pyplot as plt
 
 fig,ax = plt.subplots()
 plt.rc('font', family='monospace')
-plt.text(0.5, 1.07, "P(r) & m(r) of a pure non relativistic neutron star",
+plt.text(0.5, 1.07, "P(r) & m(r) of a pure relativistic neutron star",
          horizontalalignment='center',
          fontsize=12,
          transform = ax.transAxes)

@@ -14,15 +14,16 @@ import numpy as np
 
 
 #creazione equazione di stato
-chosen_state = Piecewise(10**34.380, [2.159,  2.189,  2.227], 10**40)
+chosen_state = Piecewise([2.159,  2.189,  2.227], trans_pressure=10**34.38, presCentral=1e40)
 chosen_state.BuildK()
 print("eos made")
+
 #creazione stella
-#star = ns("NonPureNS", chosen_state)
+star = ns("NonPureNS", chosen_state)
 
 #soluzione sistema
-cv = 3.5e15
-r_TOV,m_TOV,p_TOV = star.star_solver(star.TOV_eqs, cv, "density")
+cv = 3.5e15*cgs_geom_dictionary["cgs"]["density"]["geom"]
+r_TOV,m_TOV,p_TOV = star.star_solver(star.TOV_eqs, cv, "density", "geom")
 
 iterations = r_TOV.size
 print("TOV:",iterations, " iterations executed; mass = ", m_TOV[-1],"solar masses; total radius =", r_TOV[-1], "km")
@@ -36,7 +37,7 @@ import matplotlib.pyplot as plt
 
 fig,ax = plt.subplots()
 plt.rc('font', family='monospace')
-plt.text(0.5, 1.07, "P(r) & m(r) of a pure non relativistic neutron star",
+plt.text(0.5, 1.07, "P(r) & m(r) of a non pure relativistic neutron star",
          horizontalalignment='center',
          fontsize=12,
          transform = ax.transAxes)

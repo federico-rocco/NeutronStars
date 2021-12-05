@@ -5,7 +5,7 @@ Created on Thu Nov 18 16:09:43 2021
 @author: cosmo
 """
 import numpy as np
-from scipy.constants import speed_of_light, gravitational_constant, pi, hbar, h, m_n, m_e
+from scipy.constants import speed_of_light, gravitational_constant, hbar, m_n
 import astropy.constants
 
 
@@ -19,6 +19,7 @@ cgs_geom_dictionary = { "geom": { "lenght": {"cm": 100.,
                                              "m": 1,
                                              "km": 1e-3
                                              },
+                                 
                                   "time": {"cgs": 1/C_SI,
                                            "si": 1/C_SI,
                                            "geom": 1.
@@ -47,6 +48,7 @@ cgs_geom_dictionary = { "geom": { "lenght": {"cm": 100.,
                                             "m": 1e-2,
                                             "km": 1e-5
                                             },
+                                
                                  "time": { "cgs": 1,
                                           "si": 1,
                                           "geom": C_SI
@@ -72,66 +74,44 @@ cgs_geom_dictionary = { "geom": { "lenght": {"cm": 100.,
                                  "pressure": {"si": 0.1 ,
                                               "geom": 0.1*G_SI/(C_SI ** 4.)
                                               }
-                                },
-                        'si' : {'pressure': {'cgs': 10.,
-                                          'si': 1.,
-                                          'geom': G_SI/(C_SI ** 4.)
+                                 },
+                        
+                        "si" : { "lenght": {"cm": 100.,
+                                            "m": 1.,
+                                            "km": 1e-3
+                                            },
+                                
+                                 "time": {"cgs": 1.,
+                                          "geom": C_SI,
                                           },
-
-                             'energy_density': {'cgs': 10.,
-                                                'si':1.,
-                                                'geom': G_SI/(C_SI ** 4.)
-                                                },
-
-                             'density': {'cgs': 1e-3,
-                                         'si':1.,
-                                         'geom': (C_SI ** 2.) / G_SI,
-                                         },
-
-                             'mass': {'g': 1000.,
-                                      'kg': 1.,
-                                      'geom':  G_SI/(C_SI ** 2.),
-                                      'm_sol': 1 / MSUN_SI
-                                      },
-
-                             'lenght': {'cm': 100.,
-                                        'm': 1.,
-                                        'km': 1e-3
-                                        },
-
-                             'time': {'cgs': 1.,
-                                      'si': 1.,
-                                      'geom': C_SI,
-                                      },
-
-                             'energy': {'cgs': 1e7, 
-                                        'si': 1., 
-                                        'geom':  G_SI/(C_SI ** 4.)
-                                        }
-                             }
+                                 
+                                 "mass": {"g": 1000.,
+                                          "kg": 1.,
+                                          "geom":  G_SI/(C_SI ** 2.),
+                                          "m_sol": 1 / MSUN_SI
+                                          },
+                                
+                                 "density": {"cgs": 1e-3,
+                                             "geom": (C_SI ** 2.) / G_SI,
+                                             },
+                                                                
+                                 "energy": {"cgs": 1e7, 
+                                            "geom":  G_SI/(C_SI ** 4.)
+                                           },
+                                
+                                "energy_density": {"cgs": 10.,
+                                                   "geom": G_SI/(C_SI ** 4.)
+                                                   },
+                                
+                                "pressure": {"cgs": 10.,
+                                             "geom": G_SI/(C_SI ** 4.)
+                                             },
+                                }
                        }
+
 
 def step_comp(f, t, dt, u, v):
         
-    k1 = f(t, [u, v])
-    k2 = f(t + dt/2, [u + dt*k1[0]/2, v + dt*k1[1]/2])
-    #print("k1",k1)
-    k3 = f(t + dt/2, [u + dt*k2[0]/2, v + dt*k2[1]/2])
-    k4 = f(t + dt, [u + dt*k3[0], v + dt*k3[1]])
-    du = dt*(k1[0]+2*k2[0]+2*k3[0]+k4[0])/6
-    dv = dt*(k1[1]+2*k2[1]+2*k3[1]+k4[1])/6
-    return [du, dv]
-    
-def rk4(f, t, u, v, dt, csi):
-    
-    y = step_comp(f, t, dt, u, v)        
-    return [y[0], y[1]]
-
-
-def step_compad(f, t, dt, u, v):
-    
-
-    
     k1 = f(t, [u, v])
     k2 = f(t + dt/4, [u + dt*k1[0]/4, v + dt*k1[1]/4])
     #print("k1",k1)
@@ -147,14 +127,13 @@ def step_compad(f, t, dt, u, v):
     #print("dm=",du,"dp=",dv)
     du1 = 16*dt*k1[0]/135 + 6656*dt*k3[0]/12825 + 28561*dt*k4[0]/56430 - 9*dt*k5[0]/50 + 2*dt*k6[0]/55
     dv1 = 16*dt*k1[1]/135 + 6656*dt*k3[1]/12825 + 28561*dt*k4[1]/56430 - 9*dt*k5[1]/50 + 2*dt*k6[1]/55
-    
-    
+        
     return [du, dv,du1,dv1]
     
-def rk4ad(f, t, u, v, dt, csi, hmax):
+def adaptiveRungeKutta(f, t, u, v, dt, csi, hmax):
     
-    y = step_compad(f, t, dt, u, v)
-    #print("y=",y)
+    y = step_comp(f, t, dt, u, v)
+
     err = max(abs(y[1] - y[3]), abs(y[1] - y[3]))
     if err != 0:
         new_step = 0.9*dt*(csi*dt/err)**(0.25)
@@ -165,38 +144,39 @@ def rk4ad(f, t, u, v, dt, csi, hmax):
         else:
             if new_step < dt:
                 dt = new_step
-                y = step_compad(f, t, dt, u, v) 
-                    
+                y = step_comp(f, t, dt, u, v) 
             else:
                 dt = new_step
         
     return [y[0], y[1], dt]
 
 
-def solve(eq_type, central_pressure, eq_state):
+def ODEsolver(eq_type, central_pressure, eq_state):
       
     step = 0.1
-    csi = 10**(-5)
-    hmax=10
+    csi = 1e-5
+    max_step = 10
     
     mass = np.array([0])
     pressure = np.array([central_pressure])
-    radius = np.array([10**(-4)])
+    radius = np.array([csi])
     
     i=0
     while(pressure[i]>0):
         
-        dy = rk4ad(eq_type, radius[i], mass[i], pressure[i], step, csi, hmax)
+        dy = adaptiveRungeKutta(eq_type, radius[i], mass[i], pressure[i], step, csi, max_step)
         step = dy[2]
-        if not pressure[i] + dy[1] > 0:
+        
+        if not pressure[i]+dy[1] > 0:
             break
         mass = np.append(mass, mass[i] + dy[0])
         pressure = np.append(pressure, pressure[i] + dy[1])
         radius = np.append(radius, radius[i]+step)          
-        if True:
-            print("step:",step,"radius:",radius[i],"mass:",mass[i],"pressure:",pressure[i])
+        
         i = i+1
-    print("dy0",dy[0])
+
+        #print("step:",step,"radius:",radius[i],"mass:",mass[i],"pressure:",pressure[i])
+
     return radius,mass,pressure
 
 
