@@ -7,6 +7,7 @@ Created on Thu Nov 18 16:09:43 2021
 import numpy as np
 from scipy.constants import speed_of_light, gravitational_constant, hbar, m_n
 import astropy.constants
+import bisect
 
 
 C_SI = speed_of_light #m/s
@@ -14,6 +15,7 @@ G_SI = gravitational_constant  #m^3/(kg*s^2)
 MSUN_SI = astropy.constants.M_sun.value  #kg
 MSUN_CGS = MSUN_SI*1000 #g
 HBAR_SI = hbar
+
 
 cgs_geom_dictionary = { "geom": { "lenght": {"cm": 100.,
                                              "m": 1,
@@ -113,22 +115,34 @@ cgs_geom_dictionary = { "geom": { "lenght": {"cm": 100.,
 def step_comp(f, t, dt, u, v):
         
     k1 = f(t, [u, v])
+    
+    if v + dt*k1[1]/4<0:
+        return [0,0,0,0,False]
     k2 = f(t + dt/4, [u + dt*k1[0]/4, v + dt*k1[1]/4])
-    #print("k1",k1)
-    #print("v=",v,"k11=",k1[1],"k21=",k2[1],"dt=",dt,"v + 3*dt*k1[1]/32 + 9*dt*k2[1]/32]=",v + 3*dt*k1[1]/32 + 9*dt*k2[1]/32)
+    
+    if v + 3*dt*k1[1]/32 + 9*dt*k2[1]/32<0:
+        return [0,0,0,0,False]
     k3 = f(t + 3*dt/8, [u + 3*dt*k1[0]/32 + 9*dt*k2[0]/32, v + 3*dt*k1[1]/32 + 9*dt*k2[1]/32])
+    
+    if v + 1932*dt*k1[1]/2197 - 7200*dt*k2[1]/2197 + 7296*dt*k3[1]/2197<0:
+        return [0,0,0,0,False]
     k4 = f(t + 12*dt/13, [u + 1932*dt*k1[0]/2197 - 7200*dt*k2[0]/2197 + 7296*dt*k3[0]/2197, v + 1932*dt*k1[1]/2197 - 7200*dt*k2[1]/2197 + 7296*dt*k3[1]/2197])
+    
+    if v + 439*dt*k1[1]/216 - 8*dt*k2[1] + 3680*dt*k3[1]/513 - 845*dt*k4[1]/4104<0:
+        return [0,0,0,0,False]
     k5 = f(t + dt, [u + 439*dt*k1[0]/216 - 8*dt*k2[0] + 3680*dt*k3[0]/513 - 845*dt*k4[0]/4104, v + 439*dt*k1[1]/216 - 8*dt*k2[1] + 3680*dt*k3[1]/513 - 845*dt*k4[1]/4104])
+    
+    if v - 8*dt*k1[1]/27 + 2*dt*k2[1] -3544*dt*k3[1]/2565 + 1859*dt*k4[1]/4104 -11*dt*k5[1]/40<0:
+        return [0,0,0,0,False]
     k6 = f(t + dt/2, [u - 8*dt*k1[0]/27 + 2*dt*k2[0] -3544*dt*k3[0]/2565 + 1859*dt*k4[0]/4104 -11*dt*k5[0]/40, v - 8*dt*k1[1]/27 + 2*dt*k2[1] -3544*dt*k3[1]/2565 + 1859*dt*k4[1]/4104 -11*dt*k5[1]/40])
-    #print("k2=",k2,"k3=",k3) 
-    #print(k1,k2,k3,k4,k5)
+
     du = 25*dt*k1[0]/216 + 1408*dt*k3[0]/2565 + 2197*dt*k4[0]/4101 - dt*k5[0]/5
     dv = 25*dt*k1[1]/216 + 1408*dt*k3[1]/2565 + 2197*dt*k4[1]/4101 - dt*k5[1]/5
-    #print("dm=",du,"dp=",dv)
     du1 = 16*dt*k1[0]/135 + 6656*dt*k3[0]/12825 + 28561*dt*k4[0]/56430 - 9*dt*k5[0]/50 + 2*dt*k6[0]/55
     dv1 = 16*dt*k1[1]/135 + 6656*dt*k3[1]/12825 + 28561*dt*k4[1]/56430 - 9*dt*k5[1]/50 + 2*dt*k6[1]/55
         
-    return [du, dv,du1,dv1]
+    return [du, dv,du1,dv1,True]
+
     
 def adaptiveRungeKutta(f, t, u, v, dt, csi, hmax):
     
@@ -148,7 +162,7 @@ def adaptiveRungeKutta(f, t, u, v, dt, csi, hmax):
             else:
                 dt = new_step
         
-    return [y[0], y[1], dt]
+    return [y[0], y[1], dt, y[4]]
 
 
 def ODEsolver(eq_type, central_pressure, eq_state):
@@ -167,7 +181,7 @@ def ODEsolver(eq_type, central_pressure, eq_state):
         dy = adaptiveRungeKutta(eq_type, radius[i], mass[i], pressure[i], step, csi, max_step)
         step = dy[2]
         
-        if not pressure[i]+dy[1] > 0:
+        if dy[3]==False:
             break
         mass = np.append(mass, mass[i] + dy[0])
         pressure = np.append(pressure, pressure[i] + dy[1])
@@ -180,21 +194,19 @@ def ODEsolver(eq_type, central_pressure, eq_state):
     return radius,mass,pressure
 
 
-import bisect
-
 def CubicSpline(x, y):
-#costruisci gli intervalli dal tuo array di dati
+    
+    #Split arrays into intervals
     n = len(x)
     h = []
     for i in range(n-1):
         h.append(x[i+1] - x[i])
-#per risolvere il sistema di equazioni della spline conviene usare la derivata
-#seconda, che per una cubica è lineare in x. Integrando due volte e usando la
-#continuità togliamo le 2n costanti di integrazione. Poi derivando e usando
-#il matching della derivata prima esplicitiamo n-1 M. I restanti vengono dalle
-#boundary che sono settate a zero (Boundary type 2).
-#Il sistema da risolvere risulta fatto da una matrice triangolare e per risolverlo
-#introduciamo c_p e d_p. 
+        
+    #To solve the system of equations of the spline we use the second derivative, that is linear in x for a cubic.
+    #Integrating 2 times and using continuity we remove the 2n integration constants. Then, by derivating and matching
+    #first derivatives we explicitate n-1 M. The remaining ones come from the boundary conditions that are set to 0.
+    #The system to solve is made by a triangular matrix and we introduce c_p and d_p to solve it.
+
     A = []
     B = [] 
     C = [] 
@@ -205,13 +217,14 @@ def CubicSpline(x, y):
     for i in range(n):
        B.append(2)
     A.append(0)
-#RHS del sistema di equazioni con la tridiagonal
-    D = [] 
-    D.append(0)
+    
+    #RHS of the system with tridiagonal
+    D = [0] 
     for i in range(1, n-1):
         D.append(6*((y[i+1] - y[i])/h[i] - (y[i] - y[i-1])/h[i-1])/(h[i] + h[i-1]))
     D.append(0)
-#soluzioni del sistema con metodo di Thomas 
+    
+    #Solutions of the system with Thomas method
     c_p = C + [0] 
     d_p = [0]*n
     M = [0]*n 
@@ -220,21 +233,22 @@ def CubicSpline(x, y):
     for i in range(1, n):
         c_p[i] = (c_p[i]/(B[i] - c_p[i-1]*A[i-1]))
         d_p[i] = (D[i] - d_p[i-1]*A[i-1])/(B[i] - c_p[i-1]*A[i-1])
-    """clean"""
-#M è la derivata seconda della spline in tutti i punti, soluzione del sistema sopra
+
+    #M is the second derivative of the spline in all points, solution of the system above
     M[-1] = d_p[-1]
     for i in range(n-2, -1, -1):
         M[i] = d_p[i] - c_p[i]*M[i + 1]
     
-    #formula per i coefficienti in una cubic spline 
+    #Formula for cubic spline coefficients
     coefficients = []
     for i in range(n-1):
         coefficients.append([((M[i+1] - M[i])*h[i]**2)/6, (M[i]*h[i]**2)/2, (y[i+1] - y[i] - ((M[i+1] + 2*M[i])*h[i]**2)/6), y[i]])
-#bisect(list, num):This function returns the position in the sorted list, 
-#where the number passed in argument can be placed so as to maintain the resultant list in sorted order. 
-#If the element is already present in the list, the right most position where element has to be inserted is returned.
-    def spline(val):    
-        idx = min(bisect.bisect(x, val) - 1, n - 2)
+
+    #bisect(list, num):This function returns the position in the sorted list, 
+    #where the number passed in argument can be placed so as to maintain the resultant list in sorted order. 
+    #If the element is already present in the list, the right most position where element has to be inserted is returned.
+    def spline(val): 
+        idx = min(bisect.bisect(x, val) - 1, n-1)
         z = (val - x[idx])/h[idx]
         Coef = coefficients[idx]
         S_z = Coef[0]*z**3 + Coef[1]*z**2 + Coef[2]*z + Coef[3]

@@ -46,8 +46,8 @@ class NeutronStar:
             central_value = central_value*cgs_geom_dictionary["cgs"]["pressure"]["geom"]
         elif unit_type == "si":
             central_value = central_value*cgs_geom_dictionary["si"]["pressure"]["geom"]    
-        
-        print("starting solving")
+
+
         solutions = ODEsolver(eq_type, central_value, self.eos)
         
         r_out = np.array([])
@@ -62,11 +62,28 @@ class NeutronStar:
         return r_out, m_out, p_out
     
     
+    def mass_vs_radius(self, pressures, eq_type):
         
+        radii = np.array([])
+        masses = np.array([])
+        
+        import tqdm
+        import progressbar
+        from time import sleep
+        bar = progressbar.ProgressBar(maxval=20, \
+            widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
+        #bar.start()
 
         
+        for i in tqdm.tqdm(range(pressures.size)):
+        #for i in range(pressures.size):
+            #bar.update(i)
+            solutions = self.star_solver(eq_type, pressures[i], value_type="pressure", unit_type="cgs")
+            radii = np.append(radii, solutions[0][-1])
+            masses = np.append(masses, solutions[1][-1])
+        #bar.finish()
         
-        
+        return radii, masses
         
             
             

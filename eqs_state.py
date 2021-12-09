@@ -36,27 +36,20 @@ class Piecewise:
 #going from the core to the outside
 
     
-    def __init__(self, core_gammas, trans_pressure=10**34.38, presCentral=10**40): #gammas = gamma1,gamma2,gamma3
+    def __init__(self, core_gammas, central_density): #gammas = gamma1,gamma2,gamma3
         self.kind = "PressureEnergyDensityPiecewise"
         self.gammas = [core_gammas[0], core_gammas[1], core_gammas[2], 1.356, 0.622, 1.287, 1.584] #gammaSly3,sly2,sly1,sly0
         self.kappas = [0, 0, 0, 3.998e-8, 5.326e1, 1.061e-6, 6.801e-9] #k3,k2,k1,ksly3,ksly2,ksly1,ksly0
-        self.trans_pressure = trans_pressure*cgs_geom_dictionary["cgs"]["pressure"]["geom"]
-        trans_density = 2.7e14#(trans_pressure/self.kappas[3])**(1/self.gammas[3])
-        #self.presCentral = presCentral
-        self.rhos = [3.5e15, 1e15, 10**(14.7), trans_density, 2.627e12, 3.783e11, 2.440e7, 0] #rhocentral,3,2,trans,sy3,sly2,sly1
-        
+        self.rhos = [central_density, 1e15, 10**(14.7), 2.7e14, 2.627e12, 3.783e11, 2.440e7, 0] #rhocentral,3,2,trans,sy3,sly2,sly1
+        self.rhos = [ x*cgs_geom_dictionary["cgs"]["density"]["geom"] for x in self.rhos]
+        self.trans_pressure = 10**(34.384)*cgs_geom_dictionary["cgs"]["pressure"]["geom"]
         
     def BuildK(self):
-
         
-        #print(self.kappas)
-        #rhoCentral = 3.5e15#= (self.presCentral/self.kappas[0])**(1/self.gammas[0])
-        #self.rhos[0]=rhoCentral
-        self.rhos = [ x*cgs_geom_dictionary["cgs"]["density"]["geom"] for x in self.rhos]
         self.kappas = [ (self.kappas[i]*cgs_geom_dictionary["cgs"]["lenght"]["m"]**(3*self.gammas[i] -1)
                                            *cgs_geom_dictionary["cgs"]["time"]["geom"]**(-2)
                                            *cgs_geom_dictionary["cgs"]["mass"]["geom"]**(1-self.gammas[i]) )
-                            for i in range(len(self.kappas))]
+                            for i in range(len(self.kappas))]     
         
         k1 = self.trans_pressure/(self.rhos[3]**self.gammas[2])
         k2 = k1*self.rhos[2]**(self.gammas[2]-self.gammas[1])
@@ -64,10 +57,9 @@ class Piecewise:
         self.kappas[2] = k1
         self.kappas[1] = k2
         self.kappas[0] = k3
-        
+    
+    def BuildPressures(self):
         self.pressures = [ self.PressureFromDensity(density) for density in self.rhos]
-        
-        #print("gammas:",self.gammas,"kappas:",self.kappas,"rhos:",self.rhos, "press:",self.pressures)
     
     def PressureFromDensity(self, density):
         i=0
@@ -123,7 +115,8 @@ class Implicit:
     def InterpolateSolution(self):
         x_range = np.linspace(0,1e3,int(100000))
         p_column, e_column = self.ImplicitPressure(x_range), self.ImplicitDensity(x_range)
-        return interpolate.CubicSpline(p_column, e_column), interpolate.CubicSpline(e_column, p_column)
+
+        return CubicSpline(p_column, e_column), CubicSpline(e_column, p_column)
 
         
 
