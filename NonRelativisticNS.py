@@ -11,6 +11,7 @@ from project.NSclass import NeutronStar as ns
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+from utils import cgs_geom_dictionary
 
 
 #creating results directory
@@ -21,7 +22,7 @@ if not os.path.isdir(output_dir):
     
     
 #creating equation of state
-k = 6.483e-26
+k = 6.483e-26*(cgs_geom_dictionary["cgs"]["lenght"]["m"]**2)*(cgs_geom_dictionary["cgs"]["energy"]["geom"]**(-2/3))
 gamma = 5/3
 chosen_state = Polytropic(k, gamma)
 print("Build equation of state")
@@ -38,7 +39,7 @@ star = ns("NonrelPureNS", chosen_state)
 #solving system
 
 cv = 1.603e33 
-r_newton, m_newton, p_newton = star.star_solver(star.Newton_eqs, cv, value_type="pressure", unit_type="cgs")
+r_newton, m_newton, p_newton = star.star_solver(star.Newton_eqs, cv, "pressure", "cgs")
 r_TOV, m_TOV, p_TOV = star.star_solver(star.TOV_eqs, cv, value_type="pressure", unit_type="cgs")
 
 iterations = r_newton.size
@@ -71,7 +72,7 @@ ax2.plot(R_newton, M_newton, marker = 'o', linestyle="", color='green', label='N
 ax2.plot(R_TOV, M_TOV, marker = 'o', color='red', linestyle="", label='NS TOV mass')
 ax2.set_ylabel(r"m [$M_{\odot}$]",fontsize=14)
 
-fig.legend(loc='upper right', bbox_to_anchor=(1,1), bbox_transform=ax.transAxes)
+fig.legend(loc='center right', bbox_to_anchor=(1,1), bbox_transform=ax.transAxes)
 plt.rcParams["savefig.bbox"] = "tight"
 fig.savefig(output_dir+'nrns_m&p-vs-radius.pdf', format='pdf', dpi=1000)
 
@@ -83,8 +84,8 @@ p0_max = 1e33
 pressures = np.linspace(p0_min, p0_max, 200)
 print("Solving 200 stars")
 
-R_star_TOV, M_star_TOV = star.mass_vs_radius(pressures, star.TOV_eqs)
-R_star_newton, M_star_newton = star.mass_vs_radius(pressures, star.Newton_eqs)
+R_star_TOV, M_star_TOV = star.mass_vs_radius(pressures, star.TOV_eqs, "pressure", "cgs")
+R_star_newton, M_star_newton = star.mass_vs_radius(pressures, star.Newton_eqs, "pressure", "cgs")
 
 
 # plot Mass vs Radius

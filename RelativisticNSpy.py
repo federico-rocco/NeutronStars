@@ -33,8 +33,8 @@ star = ns("RelPureNS", chosen_state)
 #solving system
 
 cv = 3.5*10**35
-r_newton, m_newton, p_newton = star.star_solver(star.Newton_eqs, cv, value_type="pressure", unit_type="cgs")
-r_TOV, m_TOV, p_TOV = star.star_solver(star.TOV_eqs, cv, value_type="pressure", unit_type="cgs")
+r_newton, m_newton, p_newton = star.star_solver(star.Newton_eqs, cv, "pressure", "cgs")
+r_TOV, m_TOV, p_TOV = star.star_solver(star.TOV_eqs, cv, "pressure", "cgs")
 
 iterations = r_newton.size
 print("Newton:", iterations, " iterations executed; mass = ", m_newton[-1],"solar masses; total radius =", r_newton[-1], "km")
@@ -78,8 +78,8 @@ p0_max = 3.5e38
 pressures = np.linspace(p0_min, p0_max, 200)
 print("Solving 200 stars")
 
-R_star_TOV, M_star_TOV = star.mass_vs_radius(pressures, star.TOV_eqs)
-R_star_newton, M_star_newton = star.mass_vs_radius(pressures, star.Newton_eqs)
+R_star_TOV, M_star_TOV = star.mass_vs_radius(pressures, star.TOV_eqs, "pressure", "cgs")
+R_star_newton, M_star_newton = star.mass_vs_radius(pressures, star.Newton_eqs, "pressure", "cgs")
 
 
 # plot Mass vs Radius

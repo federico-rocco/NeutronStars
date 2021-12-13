@@ -11,7 +11,9 @@ import bisect
 
 
 C_SI = speed_of_light #m/s
+C_CGS = C_SI*100
 G_SI = gravitational_constant  #m^3/(kg*s^2)
+G_CGS = G_SI*1000
 MSUN_SI = astropy.constants.M_sun.value  #kg
 MSUN_CGS = MSUN_SI*1000 #g
 HBAR_SI = hbar
@@ -114,7 +116,7 @@ cgs_geom_dictionary = { "geom": { "lenght": {"cm": 100.,
 
 def step_comp(f, t, dt, u, v):
         
-    k1 = f(t, [u, v])
+    k1 = f(t, [u, v],True)
     
     if v + dt*k1[1]/4<0:
         return [0,0,0,0,False]
@@ -165,7 +167,7 @@ def adaptiveRungeKutta(f, t, u, v, dt, csi, hmax):
     return [y[0], y[1], dt, y[4]]
 
 
-def ODEsolver(eq_type, central_pressure, eq_state):
+def ODEsolver(eq_type, central_pressure):
       
     step = 0.1
     csi = 1e-5
@@ -186,7 +188,6 @@ def ODEsolver(eq_type, central_pressure, eq_state):
         mass = np.append(mass, mass[i] + dy[0])
         pressure = np.append(pressure, pressure[i] + dy[1])
         radius = np.append(radius, radius[i]+step)          
-        
         i = i+1
 
         #print("step:",step,"radius:",radius[i],"mass:",mass[i],"pressure:",pressure[i])
@@ -254,3 +255,41 @@ def CubicSpline(x, y):
         S_z = Coef[0]*z**3 + Coef[1]*z**2 + Coef[2]*z + Coef[3]
         return S_z 
     return spline 
+
+
+eos_library = {
+#    'PAL6'  :[ 34.380,  2.227,  2.189,  2.159, 'npem' ],
+    'SLy'   :[ 34.384,  3.005,  2.988,  2.851, 'npem' ],
+#    'APR1'  :[ 33.943,  2.442,  3.256,  2.908, 'npem' ],
+#    'APR2'  :[ 34.126,  2.643,  3.014,  2.945, 'npem' ],
+    'APR3'  :[ 34.392,  3.166,  3.573,  3.281, 'npem' ],
+    'APR4'  :[ 34.269,  2.830,  3.445,  3.348, 'npem' ],
+#    'FPS'   :[ 34.283,  2.985,  2.863,  2.600, 'npem' ],
+    'WFF1'  :[ 34.031,  2.519,  3.791,  3.660, 'npem' ],
+    'WFF2'  :[ 34.233,  2.888,  3.475,  3.517, 'npem' ],
+#    'WFF3'  :[ 34.283,  3.329,  2.952,  2.589, 'npem' ],
+#    'BBB2'  :[ 34.331,  3.418,  2.835,  2.832, 'npem' ],
+#    'BPAL12':[ 34.358,  2.209,  2.201,  2.176, 'npem' ],
+    'ENG'   :[ 34.437,  3.514,  3.130,  3.168, 'npem' ],
+    'MPA1'  :[ 34.495,  3.446,  3.572,  2.887, 'npem' ],
+    'MS1'   :[ 34.858,  3.224,  3.033,  1.325, 'npem' ],
+#    'MS2'   :[ 34.605,  2.447,  2.184,  1.855, 'npem' ],
+    'MS1b'  :[ 34.855,  3.456,  3.011,  1.425, 'npem' ],
+#    'PS'    :[ 34.671,  2.216,  1.640,  2.365, 'meson' ],
+#    'GS1a'  :[ 34.504,  2.350,  1.267,  2.421, 'meson' ],
+#    'GS2a'  :[ 34.642,  2.519,  1.571,  2.314, 'meson' ],
+#    'BGN1H1':[ 34.623,  3.258,  1.472,  2.464, 'hyperon' ],
+#    'GNH3'  :[ 34.648,  2.664,  2.194,  2.304, 'hyperon' ],
+#    'H1'    :[ 34.564,  2.595,  1.845,  1.897, 'hyperon' ],
+#    'H2'    :[ 34.617,  2.775,  1.855,  1.858, 'hyperon' ],
+#    'H3'    :[ 34.646,  2.787,  1.951,  1.901, 'hyperon' ],
+    'H4'    :[ 34.669,  2.909,  2.246,  2.144, 'hyperon' ],
+#    'H5'    :[ 34.609,  2.793,  1.974,  1.915, 'hyperon' ],
+#    'H6a'   :[ 34.593,  2.637,  2.121,  2.064, 'hyperon' ],
+#    'H7'    :[ 34.559,  2.621,  2.048,  2.006, 'hyperon' ],
+#    'PCL2'  :[ 34.507,  2.554,  1.880,  1.977, 'hyperon' ],
+#    'ALF1'  :[ 34.055,  2.013,  3.389,  2.033, 'quark' ],
+    'ALF2'  :[ 34.616,  4.070,  2.411,  1.890, 'quark' ],
+#    'ALF3'  :[ 34.283,  2.883,  2.653,  1.952, 'quark' ],
+#    'ALF4'  :[ 34.314,  3.009,  3.438,  1.803, 'quark' ]
+}

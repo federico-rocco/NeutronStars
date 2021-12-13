@@ -16,19 +16,30 @@ from utils import *
     
 class Polytropic:
     
-    
+    a = 0.0
     def __init__(self, k, gamma):
         self.kind = "PressureEnergyDensityPolytropic"
-        self.k = k*(cgs_geom_dictionary["cgs"]["lenght"]["m"]**2)*(cgs_geom_dictionary["cgs"]["energy"]["geom"]**(-2/3)) 
+        self.k = k 
         self.gamma = gamma
+        self.n = 1/(self.gamma-1)
         
     def DensityFromPressure(self, pressure):
         density = (pressure/self.k)**(1/self.gamma)
         return density
         
     def PressureFromDensity(self, density):
+        #print("computing with", self.k, self.gamma)
         pressure = self.k*density**self.gamma
         return pressure
+    
+    def EdenFromPressure(self, pressure):
+        density = self.DensityFromPressure(pressure)
+        eden = self.EdenFromDensity(density)
+        return eden
+
+    def EdenFromDensity(self,density):
+        eden = (1+self.a)*density + self.n*self.k*(density**self.gamma)
+        return eden
 
 class Piecewise:
  
@@ -36,63 +47,109 @@ class Piecewise:
 #going from the core to the outside
 
     
-    def __init__(self, core_gammas, central_density): #gammas = gamma1,gamma2,gamma3
+    def __init__(self, key): 
+        parameters = eos_library[key]
         self.kind = "PressureEnergyDensityPiecewise"
-        self.gammas = [core_gammas[0], core_gammas[1], core_gammas[2], 1.356, 0.622, 1.287, 1.584] #gammaSly3,sly2,sly1,sly0
-        self.kappas = [0, 0, 0, 3.998e-8, 5.326e1, 1.061e-6, 6.801e-9] #k3,k2,k1,ksly3,ksly2,ksly1,ksly0
-        self.rhos = [central_density, 1e15, 10**(14.7), 2.7e14, 2.627e12, 3.783e11, 2.440e7, 0] #rhocentral,3,2,trans,sy3,sly2,sly1
-        self.rhos = [ x*cgs_geom_dictionary["cgs"]["density"]["geom"] for x in self.rhos]
-        self.trans_pressure = 10**(34.384)*cgs_geom_dictionary["cgs"]["pressure"]["geom"]
+        self.gammas = [1.58425, 1.28733, 0.62223, 1.35692, parameters[1], parameters[2], parameters[3]] #gammaSly0,sly1,sly2,sly3,gamma1,2,3
+        self.kappas = [6.80110e-9, 1.06186e-6, 5.32697e1, 3.99874e-8] #ksly0,sly1,sly2,sly3
+        self.densities = [1e3,  2.44034e7, 3.78358e11, 2.62780e12, 2.7e14, 10**(14.7), 1e15] #rhosly1,2,3,trans,2,3,central        
+        self.densities = [ x*cgs_geom_dictionary["cgs"]["density"]["geom"] for x in self.densities]
+        self.trans_pressure = (10**parameters[0])*cgs_geom_dictionary["cgs"]["pressure"]["geom"] #k1*ptrans**Gamma1
+        self.layers = []
+        self.edens = []
+        self.pressures = []
         
     def BuildK(self):
         
-        self.kappas = [ (self.kappas[i]*cgs_geom_dictionary["cgs"]["lenght"]["m"]**(3*self.gammas[i] -1)
+        self.kappas = [ (C_CGS**2)*(self.kappas[i]*cgs_geom_dictionary["cgs"]["lenght"]["m"]**(3*self.gammas[i] -1)
                                            *cgs_geom_dictionary["cgs"]["time"]["geom"]**(-2)
                                            *cgs_geom_dictionary["cgs"]["mass"]["geom"]**(1-self.gammas[i]) )
                             for i in range(len(self.kappas))]     
         
-        k1 = self.trans_pressure/(self.rhos[3]**self.gammas[2])
-        k2 = k1*self.rhos[2]**(self.gammas[2]-self.gammas[1])
-        k3 = k2*self.rhos[1]**(self.gammas[1]-self.gammas[0])
-        self.kappas[2] = k1
-        self.kappas[1] = k2
-        self.kappas[0] = k3
+        k1 = self.trans_pressure/(self.densities[4]**self.gammas[4])
+        k2 = k1*self.densities[5]**(self.gammas[4]-self.gammas[5])
+        k3 = k2*self.densities[6]**(self.gammas[5]-self.gammas[6])
+        self.kappas.append(k1)
+        self.kappas.append(k2)
+        self.kappas.append(k3)
+        print("kappas:",self.kappas,"gammas:",self.gammas)
+        #self.kappas = [1.0770248668221202e+17, 1.9183640140950262e+18, 2.7747766144672896e+18, 16.373064274559898, 4.0848760905320256e-08, 9.101658781649894, 851304.850457802]
     
     def BuildPressures(self):
-        self.pressures = [ self.PressureFromDensity(density) for density in self.rhos]
-    
-    def PressureFromDensity(self, density):
-        i=0
-
-        while density <= self.rhos[i]:
-            if density == 0:
-                break
-            i+=1
-
-        return self.kappas[i-1]*density**self.gammas[i-1]
-    
-    def DensityFromPressure(self, pressure):
-        i=0
-
-        while pressure <= self.pressures[i]:
-            if i==7:
-                break
-            i+=1
+        self.pressures = [ self.PressureFromDensity(density) for density in self.densities]
+        #self.pressures[3] = 1.0686386273362236e-13
+        print("densities:",self.densities,"pressures:",self.pressures)
+        
+    def BuildPiecewise(self):
+        for k, gamma in zip(self.kappas, self.gammas):
             
-        return (pressure/self.kappas[i-1])**(1/self.gammas[i-1])
+            self.layers.append(Polytropic(k, gamma))
+        self.densities[4] = (self.kappas[4]/self.kappas[3])**(1/(self.gammas[3]-self.gammas[4]))
+            #print(k,gamma,self.layers[-1])
+        
+        prev_trope=None
+        for (layer, density) in zip(self.layers, self.densities):
 
-"""
-6 -> gammaSLy0, kSly0, rhoSly1
-5 -> gammaSLy1, kSly1, rhoSly2
-4 -> gammaSLy2, kSly2, rhoSly3
-3 -> gammaSLy3, kSly3, trans_density
-2 -> gamma1, k1, rho2
-1 -> gamma2, k2, rho3
-0 -> gamma3, k3, rhoCentral
-"""        
+                if not( prev_trope == None ):
+                    layer.a = self.set_trans_const( prev_trope, layer, density )
+                else:
+                    density = 0.0
+
+                eden = layer.EdenFromDensity(density)
+                pressure = layer.PressureFromDensity(density)
+
+                # eden and pressures corresponding to the densities transition values
+
+                self.pressures.append( pressure )
+                self.edens.append( eden )
+
+                prev_ed = eden
+                prev_tr = density
+                prev_trope = layer
+
+    def set_trans_const(self, prev_trope, trope, transition):
+        
+        return prev_trope.a + (prev_trope.k/(prev_trope.gamma - 1))*transition**(prev_trope.gamma-1) - (trope.k/(trope.gamma - 1))*transition**(trope.gamma-1)
+        
+        
+        
+        
+        
+    def PressureFromDensity(self, density):        
+        layer = self.FindLayer(density, "density")
+        #print("for density",density,"found",layer.PressureFromDensity(density) )
+        return layer.PressureFromDensity(density) 
 
 
+    def DensityFromPressure(self, pressure,index="False"):                
+        layer = self.FindLayer(pressure, "pressure")
+        return layer.DensityFromPressure(pressure)     
 
+    def EdenFromPressure(self, pressure,index="False"):                
+        layer = self.FindLayer(pressure, "pressure")
+        return layer.EdenFromPressure(pressure)    
+    def FindLayer(self, value, value_type):
+        #print("search press")
+        if value_type == "pressure":
+            #print("searching")
+            if value >= self.pressures[-1]:
+                return self.layers[-1]
+            for x in range( len(self.pressures) - 1):
+                if self.pressures[x] <= value < self.pressures[x+1]:
+                    #print("found pressure", x)
+                    return self.layers[x]
+                
+        elif value_type == "density":
+            #print("searchingd")
+            if value >= self.densities[-1]:
+                return self.layers[-1]
+            for x in range( len(self.densities) - 1):
+                if self.densities[x] <= value < self.densities[x+1]:
+                    #print("found dens", x)
+                    return self.layers[x] 
+                
+                
+                
 class Implicit:
     
     

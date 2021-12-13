@@ -23,11 +23,13 @@ if not os.path.isdir(output_dir):
 
 
 #creazione equazione di stato
-cv = 10**(16)
-chosen_state = Piecewise([2.851,  2.988,  3.005], cv)
+cv = 3.5e15
+chosen_state = Piecewise("SLy")
 chosen_state.BuildK()
-chosen_state.BuildPressures()
+chosen_state.BuildPiecewise()
+#chosen_state.BuildPressures()
 print("Built equation of state")
+
 
 #creating star
 star = ns("ReadNS", chosen_state)
@@ -40,8 +42,7 @@ star = ns("ReadNS", chosen_state)
 
 #solving system
 
-cv = cv*cgs_geom_dictionary["cgs"]["density"]["geom"]
-r_TOV,m_TOV,p_TOV = star.star_solver(star.TOV_eqs, cv, value_type="density", unit_type="geom")
+r_TOV,m_TOV,p_TOV = star.star_solver(star.TOV_eqs, cv, "density", "cgs")
 
 
 iterations = r_TOV.size
@@ -72,13 +73,12 @@ fig.savefig(output_dir+'read_m&p-vs-radius.pdf', format='pdf', dpi=1000)
 
 
 #sequence of 200 stars for Mass vs Radius and Mass/Radius vs central pressure 
-
-p0_min = 1e30
-p0_max = 1e33
-pressures = np.linspace(p0_min, p0_max, 200)
+ 
+d0_min = 13.5
+d0_max = 16.5
+densities = np.logspace(d0_min, d0_max, 200)
 print("Solving 200 stars")
-
-R_star_TOV, M_star_TOV = star.mass_vs_radius(pressures, star.TOV_eqs)
+R_star_TOV, M_star_TOV = star.mass_vs_radius(densities, star.TOV_eqs, "density", "cgs")
 
 
 # plot Mass vs Radius
@@ -102,14 +102,14 @@ plt.rc('font', family='monospace')
 plt.title("Mass/Radius vs Central Pressure in a Read NS")
 ax.set_xscale('log')
 ax.minorticks_on()
-ax.plot(pressures, M_star_TOV, color="black", linestyle="-.", linewidth=2,  label = 'M-TOV')
-ax.set_xlabel('p0 [$dyne/cm^2$]',fontsize=14)
+ax.plot(densities, M_star_TOV, color="black", linestyle="-.", linewidth=2,  label = 'M-TOV')
+ax.set_xlabel('rho0 [$dyne/cm^2$]',fontsize=14)
 ax.set_ylabel(r"M [$M_{\odot}$]", fontsize=14)
 
 ax2 = ax.twinx()
 ax2.set_xscale('log')
 ax2.minorticks_on()
-ax2.plot(pressures, R_star_TOV, color="black", linestyle=":", linewidth=2,  label = 'R-TOV')
+ax2.plot(densities, R_star_TOV, color="black", linestyle=":", linewidth=2,  label = 'R-TOV')
 ax2.set_ylabel(r"R [$km$]",fontsize=14)
 
 fig.legend(loc='upper center', bbox_to_anchor=(0.5,1), bbox_transform=ax.transAxes)
