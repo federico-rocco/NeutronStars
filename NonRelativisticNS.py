@@ -6,12 +6,13 @@ Created on Thu Nov 18 15:47:45 2021
 """
 
 #selezione eq stato
-from project.eqs_state import Polytropic
-from project.NSclass import NeutronStar as ns
+from eqs_state import Polytropic
+from NSclass import NeutronStar as ns
 import matplotlib.pyplot as plt
 import numpy as np
 import os
 from utils import cgs_geom_dictionary
+from functools import partial
 
 
 #creating results directory
@@ -39,18 +40,18 @@ star = ns("NonrelPureNS", chosen_state)
 #solving system
 
 cv = 1.603e33 
-r_newton, m_newton, p_newton = star.star_solver(star.Newton_eqs, cv, "pressure", "cgs")
-r_TOV, m_TOV, p_TOV = star.star_solver(star.TOV_eqs, cv, value_type="pressure", unit_type="cgs")
+r_newton, m_newton, p_newton = star.star_solver(star.newton_eqs, cv, "pressure", "cgs")
+r_tov, m_tov, p_tov = star.star_solver(star.tov_eqs, cv, value_type="pressure", unit_type="cgs")
 
 iterations = r_newton.size
 print("Newton:", iterations, " iterations executed; mass = ", m_newton[-1],"solar masses; total radius =", r_newton[-1], "km")
 R_newton = r_newton[-1]
 M_newton= m_newton[-1]
 
-iterations = r_TOV.size
-print("TOV:",iterations, " iterations executed; mass = ", m_TOV[-1],"solar masses; total radius =", r_TOV[-1], "km")
-R_TOV = r_TOV[-1]
-M_TOV= m_TOV[-1]
+iterations = r_tov.size
+print("tov:",iterations, " iterations executed; mass = ", m_tov[-1],"solar masses; total radius =", r_tov[-1], "km")
+R_tov = r_tov[-1]
+M_tov= m_tov[-1]
 
 
 #plot
@@ -59,7 +60,7 @@ fig,ax = plt.subplots()
 plt.rc('font', family='monospace')
 plt.text(0.5, 1.07, "P(r) & m(r) of a pure non relativistic neutron star", horizontalalignment='center', fontsize=12, transform = ax.transAxes)
 ax.plot(r_newton, p_newton, color="blue", linestyle="-", linewidth=1, label = 'P Newton')
-ax.plot(r_TOV, p_TOV, color="black", linestyle="-", linewidth=2,  label = 'P TOV')
+ax.plot(r_tov, p_tov, color="black", linestyle="-", linewidth=2,  label = 'P tov')
 ax.set_xlabel('r [km]',fontsize=14)
 ax.set_ylabel(r'P [$dyne/cm^2$]', fontsize=14)
 ax.minorticks_on()
@@ -67,9 +68,9 @@ ax.minorticks_on()
 ax2 = ax.twinx()
 ax2.minorticks_on()
 ax2.plot(r_newton, m_newton,color="blue", linestyle=":", label = 'm Newton')
-ax2.plot(r_TOV, m_TOV, color="black", linestyle="-.", label = 'm TOV')
+ax2.plot(r_tov, m_tov, color="black", linestyle="-.", label = 'm tov')
 ax2.plot(R_newton, M_newton, marker = 'o', linestyle="", color='green', label='NS Newton mass')
-ax2.plot(R_TOV, M_TOV, marker = 'o', color='red', linestyle="", label='NS TOV mass')
+ax2.plot(R_tov, M_tov, marker = 'o', color='red', linestyle="", label='NS tov mass')
 ax2.set_ylabel(r"m [$M_{\odot}$]",fontsize=14)
 
 fig.legend(loc='center right', bbox_to_anchor=(1,1), bbox_transform=ax.transAxes)
@@ -83,9 +84,17 @@ p0_min = 1e30
 p0_max = 1e33
 pressures = np.linspace(p0_min, p0_max, 200)
 print("Solving 200 stars")
-
-R_star_TOV, M_star_TOV = star.mass_vs_radius(pressures, star.TOV_eqs, "pressure", "cgs")
-R_star_newton, M_star_newton = star.mass_vs_radius(pressures, star.Newton_eqs, "pressure", "cgs")
+import multiprocessing as mp
+l = mp.Lock()
+func = partial(star.star_solver, star.tov_eqs, value_type="pressure", unit_type="cgs")
+import tqdm
+if __name__ == '__main__':
+   with mp.Pool(2) as pool:
+      #results = [pool.map(func, tqdm.tqdm(pressures, total=pressures.size))]
+      #results = pool.starmap(star.star_solver, star.tov_eqs, tqdm.tqdm(pressures, total=pressures.size))
+      r = list(tqdm.tqdm(pool.imap(func, pressures), total=pressures.size))
+"""R_star_tov, M_star_tov = star.mass_vs_radius(pressures, star.tov_eqs, "pressure", "cgs")
+R_star_newton, M_star_newton = star.mass_vs_radius(pressures, star.newton_eqs, "pressure", "cgs")
 
 
 # plot Mass vs Radius
@@ -94,7 +103,7 @@ fig,ax = plt.subplots()
 plt.rc('font', family='monospace')
 plt.title("Mass-Radius of a pure non relativistic NS")
 ax.plot(R_star_newton, M_star_newton, color="blue", linestyle="-.", linewidth=1, label = 'Newton')
-ax.plot(R_star_TOV, M_star_TOV, color="black", linestyle="-.", linewidth=2,  label = 'TOV')
+ax.plot(R_star_tov, M_star_tov, color="black", linestyle="-.", linewidth=2,  label = 'tov')
 ax.set_xlabel('R [km]',fontsize=14)
 ax.set_ylabel(r"M [$M_{\odot}$]", fontsize=14)
 ax.minorticks_on()
@@ -111,17 +120,17 @@ plt.title("Mass/Radius vs Central Pressure in a pure non relativistic NS")
 ax.set_xscale('log')
 ax.minorticks_on()
 ax.plot(pressures, M_star_newton, color="blue", linestyle="-.", linewidth=1, label = 'M-Newton')
-ax.plot(pressures, M_star_TOV, color="black", linestyle="-.", linewidth=2,  label = 'M-TOV')
-ax.set_xlabel('p0 [$dyne/cm^2$]',fontsize=14)
+ax.plot(pressures, M_star_tov, color="black", linestyle="-.", linewidth=2,  label = 'M-tov')
+ax.set_xlabel('$p_0$ [$dyne/cm^2$]',fontsize=14)
 ax.set_ylabel(r"M [$M_{\odot}$]", fontsize=14)
 
 ax2 = ax.twinx()
 ax2.set_xscale('log')
 ax2.minorticks_on()
 ax2.plot(pressures, R_star_newton, color="blue", linestyle=":", linewidth=1, label = 'R-Newton')
-ax2.plot(pressures, R_star_TOV, color="black", linestyle=":", linewidth=2,  label = 'R-TOV')
+ax2.plot(pressures, R_star_tov, color="black", linestyle=":", linewidth=2,  label = 'R-tov')
 ax2.set_ylabel(r"R [$km$]",fontsize=14)
 
 fig.legend(loc='upper center', bbox_to_anchor=(0.5,1), bbox_transform=ax.transAxes)
 plt.rcParams["savefig.bbox"] = "tight"
-fig.savefig(output_dir+'nrns_mr-vs-p0.pdf', format='pdf', dpi=1000)
+fig.savefig(output_dir+'nrns_mr-vs-p0.pdf', format='pdf', dpi=1000)"""

@@ -8,7 +8,6 @@ Created on Fri Nov 19 12:13:14 2021
 #class Implicit:
     
 import numpy as np
-from scipy import interpolate
 from utils import *
 
 
@@ -16,50 +15,171 @@ from utils import *
     
 class Polytropic:
     
-    a = 0.0
+    
     def __init__(self, k, gamma):
+    
+        """
+        
+        Class that builds a polytropic equation of state relating pressure and energy density of the kind p = k*epsilon^gamma
+
+        Parameters
+        ----------
+        k : float
+            tropic coefficient
+        gamma : float
+            adiabatic index
+        n : float
+            polytropic index
+        a : float
+            transition continuity constant 
+        -------
+
+        """
+        
         self.kind = "PressureEnergyDensityPolytropic"
         self.k = k 
         self.gamma = gamma
         self.n = 1/(self.gamma-1)
+        self.a = 0.0
         
-    def DensityFromPressure(self, pressure):
+    def density_from_pressure(self, pressure):
+    
+        """
+        
+        Method that returns the density given the pressure, as d = (p/k)^(1/gamma)
+
+        Parameters
+        ----------
+        pressure : float
+            input pressure
+
+        Returns density : float
+            computed density
+        -------
+
+        """
+        
         density = (pressure/self.k)**(1/self.gamma)
         return density
         
-    def PressureFromDensity(self, density):
-        #print("computing with", self.k, self.gamma)
+    def pressure_from_density(self, density):
+        
+        """
+        
+        Method that returns the pressure given the density, as p = k*d^gamma
+
+        Parameters
+        ----------
+        density : float
+            input density
+
+        Returns pressure : float
+            computed pressure
+        -------
+
+        """
+        
         pressure = self.k*density**self.gamma
         return pressure
     
-    def EdenFromPressure(self, pressure):
-        density = self.DensityFromPressure(pressure)
-        eden = self.EdenFromDensity(density)
+    def eden_from_pressure(self, pressure):
+        
+        """
+        
+        Method that returns the energy density given the pressure, by calling density_from_pressure and eden_from_density
+
+        Parameters
+        ----------
+        pressure : float
+            input pressure
+
+        Returns eden : float
+            computed energy density
+        -------
+
+        """
+        
+        density = self.density_from_pressure(pressure)
+        eden = self.eden_from_density(density)
         return eden
 
-    def EdenFromDensity(self,density):
-        eden = (1+self.a)*density + self.n*self.k*(density**self.gamma)
+    def eden_from_density(self,density):
+        
+        """
+        
+        Method that returns the energy density given the density, as epsilon = (1+a)*d + n*k*d^gamma
+
+        Parameters
+        ----------
+        density : float
+            input density
+
+        Returns eden : float
+            computed energy density
+        -------
+
+        """
+
+        eden = (1 + self.a)*density + self.n*self.k*(density**self.gamma)
         return eden
+
+
 
 class Piecewise:
- 
-
-#going from the core to the outside
-
     
-    def __init__(self, key): 
+    
+    def __init__(self, key):
+    
+        """
+        
+        Class that builds a piecewise equation of state relating pressure and energy density as p = k_i*epsilon^gamma_i, 
+        where i represent the layer of the star. Each layer is a Polytropic object
+
+        Parameters
+        ----------
+        key : string
+            allows to choose a set of values (transition pressure, gamma_1, gamma_2, gamma_3) from a set of different models
+            provided in eos_library in utils
+        kappas : array of float
+            tropic coefficients
+        gammas : array of float
+            adiabatic indexes
+        trans_pressure : float
+            pressure of transition between core and crust, needed to compute k1 in build_k
+        densities : array of float
+            densities of transition between layers
+        pressures : array of float
+            pressures of transition between layers, computed in build_piecewise
+        edens : array of float
+            energy densities of transition between layers, computed in build_piecewise
+        layers : array of Polytropic objects
+            polytropic equation of states for each layer
+        
+        -------
+        Note: the piecewise eos is not complete with the constructor, build_piecewise needs to be called
+
+        """
+        
         parameters = eos_library[key]
         self.kind = "PressureEnergyDensityPiecewise"
-        self.gammas = [1.58425, 1.28733, 0.62223, 1.35692, parameters[1], parameters[2], parameters[3]] #gammaSly0,sly1,sly2,sly3,gamma1,2,3
         self.kappas = [6.80110e-9, 1.06186e-6, 5.32697e1, 3.99874e-8] #ksly0,sly1,sly2,sly3
-        self.densities = [1e3,  2.44034e7, 3.78358e11, 2.62780e12, 2.7e14, 10**(14.7), 1e15] #rhosly1,2,3,trans,2,3,central        
-        self.densities = [ x*cgs_geom_dictionary["cgs"]["density"]["geom"] for x in self.densities]
+        self.gammas = [1.58425, 1.28733, 0.62223, 1.35692, parameters[1], parameters[2], parameters[3]] #gammaSly0,sly1,sly2,sly3,gamma1,2,3
         self.trans_pressure = (10**parameters[0])*cgs_geom_dictionary["cgs"]["pressure"]["geom"] #k1*ptrans**Gamma1
-        self.layers = []
-        self.edens = []
+        self.densities = [0,  2.44034e7, 3.78358e11, 2.62780e12, 2.7e14, 10**(14.7), 1e15] #rhosly1,2,3,trans,2,3,central        
+        self.densities = [ x*cgs_geom_dictionary["cgs"]["density"]["geom"] for x in self.densities]
         self.pressures = []
+        self.edens = []
+        self.layers = []
+   
         
-    def BuildK(self):
+    def build_k(self):
+    
+        """
+        
+        Method that computed the tropic coefficients of the core starting from the transition pressure
+        -------
+
+        """    
         
         self.kappas = [ (C_CGS**2)*(self.kappas[i]*cgs_geom_dictionary["cgs"]["lenght"]["m"]**(3*self.gammas[i] -1)
                                            *cgs_geom_dictionary["cgs"]["time"]["geom"]**(-2)
@@ -72,81 +192,172 @@ class Piecewise:
         self.kappas.append(k1)
         self.kappas.append(k2)
         self.kappas.append(k3)
-        print("kappas:",self.kappas,"gammas:",self.gammas)
-        #self.kappas = [1.0770248668221202e+17, 1.9183640140950262e+18, 2.7747766144672896e+18, 16.373064274559898, 4.0848760905320256e-08, 9.101658781649894, 851304.850457802]
+
+        
+    def build_piecewise(self):
     
-    def BuildPressures(self):
-        self.pressures = [ self.PressureFromDensity(density) for density in self.densities]
-        #self.pressures[3] = 1.0686386273362236e-13
-        print("densities:",self.densities,"pressures:",self.pressures)
+        """
         
-    def BuildPiecewise(self):
-        for k, gamma in zip(self.kappas, self.gammas):
-            
+        Method that finishes building the piecewise eos by computing the three core tropic coefficients and instantiating a 
+        Polytropic object for each layer. It also computes transition energy densitites and pressures
+        -------
+
+        """
+    
+        self.build_k()
+        
+        for k, gamma in zip(self.kappas, self.gammas):           
             self.layers.append(Polytropic(k, gamma))
+            
         self.densities[4] = (self.kappas[4]/self.kappas[3])**(1/(self.gammas[3]-self.gammas[4]))
-            #print(k,gamma,self.layers[-1])
         
-        prev_trope=None
+        prev_layer = None
         for (layer, density) in zip(self.layers, self.densities):
 
-                if not( prev_trope == None ):
-                    layer.a = self.set_trans_const( prev_trope, layer, density )
+                if not(prev_layer == None):
+                    layer.a = self.set_transition(prev_layer, layer, density)
                 else:
                     density = 0.0
 
-                eden = layer.EdenFromDensity(density)
-                pressure = layer.PressureFromDensity(density)
+                eden = layer.eden_from_density(density)
+                pressure = layer.pressure_from_density(density)
 
-                # eden and pressures corresponding to the densities transition values
+                self.pressures.append(pressure)
+                self.edens.append(eden)
+                
+                prev_layer = layer
 
-                self.pressures.append( pressure )
-                self.edens.append( eden )
-
-                prev_ed = eden
-                prev_tr = density
-                prev_trope = layer
-
-    def set_trans_const(self, prev_trope, trope, transition):
+    def set_transition(self, prev_layer, layer, density):
+    
+        """
         
-        return prev_trope.a + (prev_trope.k/(prev_trope.gamma - 1))*transition**(prev_trope.gamma-1) - (trope.k/(trope.gamma - 1))*transition**(trope.gamma-1)
+        Method that computes the transition continuity constant of a layer given the current layer and the previous one
+
+        Parameters
+        ----------
+        prev_layer : Polytropic object
+            previous layer
+        layer : Polytropic object
+            current layer
+        density : float
+            density of transition between layers
+
+        Returns transition : float
+            a + (k/(gamma-1))*d^(gamma-1) of the previous layer - (k/(gamma-1))*d^(gamma-1) of the current layer
+        -------
+
+        """   
+        
+        transition = prev_layer.a + (prev_layer.k/(prev_layer.gamma - 1))*density**(prev_layer.gamma-1) - (layer.k/(layer.gamma - 1))*density**(layer.gamma-1)
+        return transition
         
         
+    def pressure_from_density(self, density):  
         
+        """
         
+        Method that returns the pressure given the density, by finding the layer the density belongs to, and then returning 
+        the polytropic pressure
+
+        Parameters
+        ----------
+        density : float
+            input density
+
+        Returns pressure : float
+            computed pressure
+        -------
+
+        """
         
-    def PressureFromDensity(self, density):        
-        layer = self.FindLayer(density, "density")
-        #print("for density",density,"found",layer.PressureFromDensity(density) )
-        return layer.PressureFromDensity(density) 
+        layer = self.find_layer(density, "density")
+        pressure = layer.pressure_from_density(density) 
+        return pressure
 
 
-    def DensityFromPressure(self, pressure,index="False"):                
-        layer = self.FindLayer(pressure, "pressure")
-        return layer.DensityFromPressure(pressure)     
+    def density_from_pressure(self, pressure):  
 
-    def EdenFromPressure(self, pressure,index="False"):                
-        layer = self.FindLayer(pressure, "pressure")
-        return layer.EdenFromPressure(pressure)    
-    def FindLayer(self, value, value_type):
-        #print("search press")
+        """
+        
+        Method that returns the density given the pressure, by finding the layer the pressure belongs to, and then returning 
+        the polytropic density
+
+        Parameters
+        ----------
+        pressure : float
+            input pressure
+
+        Returns density : float
+            computed density
+        -------
+
+        """ 
+             
+        layer = self.find_layer(pressure, "pressure")
+        density = layer.density_from_pressure(pressure) 
+        return density
+
+
+    def eden_from_pressure(self, pressure): 
+
+        """
+        
+        Method that returns the energy density given the pressure, by finding the layer the pressure belongs to, and then returning 
+        the polytropic energy density
+
+        Parameters
+        ----------
+        pressure : float
+            input pressure
+
+        Returns eden : float
+            computed energy density
+        -------
+
+        """
+               
+        layer = self.find_layer(pressure, "pressure")
+        eden = layer.eden_from_pressure(pressure)   
+        return eden
+    
+    
+    def find_layer(self, value, value_type):
+    
+        """
+        
+        Method that finds a layer given a value of pressure or density, by confronting it with the transition
+        densities or pressures of the Piecewise
+
+        Parameters
+        ----------
+        value : float
+            input pressure or density
+        value_type : string
+            "pressure" or "density"
+
+        Returns layers[i] : Polytropic object
+            the found layer 
+        -------
+
+        """
+        
         if value_type == "pressure":
-            #print("searching")
+            
             if value >= self.pressures[-1]:
                 return self.layers[-1]
-            for x in range( len(self.pressures) - 1):
-                if self.pressures[x] <= value < self.pressures[x+1]:
-                    #print("found pressure", x)
-                    return self.layers[x]
+            
+            for i in range( len(self.pressures) - 1):
+                if self.pressures[i] <= value < self.pressures[i+1]:
+                    return self.layers[i]
                 
         elif value_type == "density":
-            #print("searchingd")
+            
             if value >= self.densities[-1]:
                 return self.layers[-1]
-            for x in range( len(self.densities) - 1):
-                if self.densities[x] <= value < self.densities[x+1]:
-                    #print("found dens", x)
-                    return self.layers[x] 
+            
+            for i in range( len(self.densities) - 1):
+                if self.densities[i] <= value < self.densities[i+1]:
+                    return self.layers[i] 
                 
                 
                 
@@ -155,25 +366,71 @@ class Implicit:
     
     
     def __init__(self):
+    
+        """
+        
+        Class that, given the explicit expression of the energy and the pressure in function of x = k_f/(m*c), where k_f 
+        is the Fermi momentum, returns the interpolated eos e = e(p)
+        -------
+
+        """
+        
         self.kind = "PressureEnergyDensityImplicit"        
         self.e0 = ((m_n**4)*(C_SI**5)/((np.pi**2)*(HBAR_SI**3)))*cgs_geom_dictionary['si']['energy_density']['geom']
-        self.DensityFromPressure, self.PressureFromDensity = self.InterpolateSolution()
-        print("built eos")
+        self.density_from_pressure, self.pressure_from_density = self.interpolate_solution()
+        self.eden_from_pressure = self.density_from_pressure
         
         
         
-    def ImplicitDensity(self, x):       
+    def implicit_density(self, x):
+    
+        """
+        
+        Method that returns the density corresponding to a reduced k_fermi x
+        
+        Parameters
+        ----------
+        x : float
+            k_fermi/m*c
+        -------
+
+        """
+        
         return (self.e0/8)*((2*x**3 + x)*np.sqrt(1.0 + x**2) - np.arcsinh(x))
 
-    def ImplicitPressure(self, x):
+    def implicit_pressure(self, x):
+        
+        """
+        
+        Method that returns the pressure corresponding to a reduced k_fermi x
+        
+        Parameters
+        ----------
+        x : float
+            k_fermi/m*c
+        -------
+
+        """
+        
         return (self.e0/24)*((2*x**3 - 3*x)*np.sqrt(1.0 + x**2) + 3*np.arcsinh(x))
     
     
-    def InterpolateSolution(self):
-        x_range = np.linspace(0,1e3,int(100000))
-        p_column, e_column = self.ImplicitPressure(x_range), self.ImplicitDensity(x_range)
+    def interpolate_solution(self):
+    
+        """
+        
+        Method that interpolates two array of 100000 pressures and energy densities
 
-        return CubicSpline(p_column, e_column), CubicSpline(e_column, p_column)
+        Returns cubic_spline : function
+            return of utils.cubic_spline
+        -------
+
+        """
+        
+        x_range = np.linspace(0, 1e3, int(100000))
+        p_column, e_column = self.implicit_pressure(x_range), self.implicit_density(x_range)
+
+        return cubic_spline(p_column, e_column), cubic_spline(e_column, p_column)
 
         
 
