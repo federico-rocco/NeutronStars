@@ -11,9 +11,9 @@ import numpy as np
 from utils import *
 
 
-
-    
+   
 class Polytropic:
+    
     
     
     def __init__(self, k, gamma):
@@ -42,6 +42,8 @@ class Polytropic:
         self.n = 1/(self.gamma-1)
         self.a = 0.0
         
+        
+        
     def density_from_pressure(self, pressure):
     
         """
@@ -62,6 +64,8 @@ class Polytropic:
         density = (pressure/self.k)**(1/self.gamma)
         return density
         
+    
+    
     def pressure_from_density(self, density):
         
         """
@@ -81,6 +85,8 @@ class Polytropic:
         
         pressure = self.k*density**self.gamma
         return pressure
+    
+    
     
     def eden_from_pressure(self, pressure):
         
@@ -102,6 +108,8 @@ class Polytropic:
         density = self.density_from_pressure(pressure)
         eden = self.eden_from_density(density)
         return eden
+
+
 
     def eden_from_density(self,density):
         
@@ -126,6 +134,7 @@ class Polytropic:
 
 
 class Piecewise:
+    
     
     
     def __init__(self, key):
@@ -172,6 +181,7 @@ class Piecewise:
         self.layers = []
    
         
+   
     def build_k(self):
     
         """
@@ -194,6 +204,7 @@ class Piecewise:
         self.kappas.append(k3)
 
         
+
     def build_piecewise(self):
     
         """
@@ -227,6 +238,8 @@ class Piecewise:
                 
                 prev_layer = layer
 
+
+
     def set_transition(self, prev_layer, layer, density):
     
         """
@@ -252,6 +265,7 @@ class Piecewise:
         return transition
         
         
+        
     def pressure_from_density(self, density):  
         
         """
@@ -273,6 +287,7 @@ class Piecewise:
         layer = self.find_layer(density, "density")
         pressure = layer.pressure_from_density(density) 
         return pressure
+
 
 
     def density_from_pressure(self, pressure):  
@@ -298,6 +313,7 @@ class Piecewise:
         return density
 
 
+
     def eden_from_pressure(self, pressure): 
 
         """
@@ -319,6 +335,7 @@ class Piecewise:
         layer = self.find_layer(pressure, "pressure")
         eden = layer.eden_from_pressure(pressure)   
         return eden
+    
     
     
     def find_layer(self, value, value_type):
@@ -398,6 +415,8 @@ class Implicit:
         
         return (self.e0/8)*((2*x**3 + x)*np.sqrt(1.0 + x**2) - np.arcsinh(x))
 
+
+
     def implicit_pressure(self, x):
         
         """
@@ -413,6 +432,7 @@ class Implicit:
         """
         
         return (self.e0/24)*((2*x**3 - 3*x)*np.sqrt(1.0 + x**2) + 3*np.arcsinh(x))
+    
     
     
     def interpolate_solution(self):

@@ -7,7 +7,12 @@ Created on Mon Nov 22 19:02:16 2021
 
 import numpy as np
 import multiprocessing as mp
+from multiprocessing.pool import ThreadPool as Pool
+import tqdm
+from functools import partial
 from utils import ode_solver, cgs_geom_dictionary
+
+
 
 class NeutronStar:
 
@@ -35,6 +40,7 @@ class NeutronStar:
         self.kind = NS_type
         self.eos = eq_state
         
+    
     
     def tov_eqs(self, r, y):
         
@@ -66,6 +72,8 @@ class NeutronStar:
         
         return dy
 
+
+
     def newton_eqs(self, r, y):
 
         """
@@ -94,7 +102,9 @@ class NeutronStar:
         dy = [dm, dp]
 
         return dy
+  
     
+  
     def star_solver(self, eq_type, central_value, value_type="pressure", unit_type="geom"):
 
         """
@@ -126,7 +136,7 @@ class NeutronStar:
         if eq_type not in [self.tov_eqs, self.newton_eqs]:
             raise ValueError("Differential equations to be passed: tov_eqs os newton_eqs") 
         if value_type not in ["pressure", "density"]:
-            raise ValueError("Can only pass a pressure or a density as central value") 
+            raise ValueError("Can only pass a pressure or a density as central value, you passed",value_type) 
         if unit_type not in ["geom", "si", "cgs"]:
             raise ValueError("Specify \"geom\", \"si\" or \"cgs\" as unit type") 
   
@@ -146,21 +156,7 @@ class NeutronStar:
             p_out = np.append(p_out, solutions[2][i]*cgs_geom_dictionary["geom"]["pressure"]["cgs"])
 
         return r_out, m_out, p_out
-        
     
-    def mass_vs_radius_old(self, centrals, eq_type, value_type, unit_type):
-        
-        radii = np.array([])
-        masses = np.array([])
-
-        
-        import tqdm               
-        for i in tqdm.tqdm(range(centrals.size)):
-            solutions = self.star_solver(eq_type, centrals[i], value_type, unit_type)
-            radii = np.append(radii, solutions[0][-1])
-            masses = np.append(masses, solutions[1][-1])
-        print(__name__)    
-        return radii, masses
     
     
     def mass_vs_radius(self, centrals, eq_type, value_type="pressure", unit_type="geom"):
@@ -188,15 +184,12 @@ class NeutronStar:
         
         radii = np.array([])
         masses = np.array([])
-            
-        import tqdm
-        pool = mp.Pool(mp.cpu_count())
-        for _ in tqdm.tqdm(pool.apply(self.star_solver, args=(eq_type, central, value_type, unit_type)), total=len(centrals)):
-            pass
-        results = [pool.apply(self.star_solver, args=(eq_type, central, value_type, unit_type)) for central in centrals]
-        pool.close()
-        pool.join()
-    
+
+        func = partial(self.star_solver, eq_type, value_type=value_type, unit_type=unit_type)
+        with Pool(mp.cpu_count()) as pool:
+            results = list(tqdm.tqdm(pool.imap(func, centrals), total=centrals.size))
+            pool.close()
+            pool.join()
         for result in results:
             radii = np.append(radii, result[0][-1])
             masses = np.append(masses, result[1][-1])

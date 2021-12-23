@@ -20,6 +20,8 @@ MSUN_SI = astropy.constants.M_sun.value  #kg
 MSUN_CGS = MSUN_SI*1000 #g
 HBAR_SI = hbar
 
+
+
 #dictionary for units provided by LIGO https://github.com/lscsoft/bilby/blob/master/bilby/gw/eos/eos.py
 cgs_geom_dictionary = { "geom": { "lenght": {"cm": 100.,
                                              "m": 1,
@@ -198,6 +200,7 @@ def ode_solver(eq_type, initial_value, step=10):
         i += 1
 
     return x, y_1, y_2
+
 
 
 def cubic_spline(x, y):
