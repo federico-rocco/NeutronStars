@@ -8,7 +8,6 @@ import numpy as np
 from scipy.constants import speed_of_light, gravitational_constant, hbar, m_n
 import astropy.constants
 import bisect
-import matplotlib.pyplot as plt
 
 
 

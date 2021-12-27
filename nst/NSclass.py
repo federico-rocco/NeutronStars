@@ -10,7 +10,7 @@ import multiprocessing as mp
 from multiprocessing.pool import ThreadPool as Pool
 import tqdm
 from functools import partial
-from utils import ode_solver, cgs_geom_dictionary
+from nst.utils import ode_solver, cgs_geom_dictionary
 
 
 

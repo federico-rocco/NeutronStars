@@ -7,8 +7,7 @@ Created on Fri Nov 19 12:13:14 2021
 
 #class Implicit:
     
-import numpy as np
-from utils import *
+from nst.utils import *
 
 
    
