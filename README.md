@@ -4,12 +4,12 @@ A python package for the study of neutron stars.
 
 ## Description
 
-The package can solve a system of differential equations in order to determine the Mass and Radius of a star with a given central pressure. Both the non-relativistic and full 
+The package can solve a system of differential equations in order to determine the Mass and Radius of a neutron star with a given central pressure. Both the non-relativistic and full 
 relativistic case are available using respectively Newton and Tolman-Oppenheimer-Volkoff structures equations.
-With the implementation of different pressure-energy density equation of states different kinds of stars can be simulated:
+With the implementation of different pressure-energy density equations of state different kinds of stars can be simulated:
 1. a polytropic function in the form <img src="https://latex.codecogs.com/svg.image?P=K\cdot\varepsilon^{\gamma}" title="P=K\cdot\varepsilon^{\gamma}" />, managed by the class `Polytropic`. This eos is used for the non-relativistic case of a pure neutron star.
-2. implicit form of the equations <img src="https://latex.codecogs.com/svg.image?P&space;=&space;P(x)" title="P = P(x)" /> and <img src="https://latex.codecogs.com/svg.image?\varepsilon&space;=&space;\varepsilon(x)" title="\varepsilon = \varepsilon(x)" />. This eos is used for a pure neutron star in the full relativistic case.
-3. piecewise polytropic eos, where in each range a polytropic eos is implemented. This kind of eos is used for non-pure stars like Read neutron stars.
+2. implicit form of the equations <img src="https://latex.codecogs.com/svg.image?P=P(x)" title="P=P(x)" /> and <img src="https://latex.codecogs.com/svg.image?\varepsilon=\varepsilon(x)" title="\varepsilon=\varepsilon(x)" />. This eos is used for a pure neutron star in the full relativistic case.
+3. piecewise polytropic eos, where in each range a polytropic eos is implemented. This eos is used for non-pure stars like Read neutron stars.
 
 ## Prerequisites
 
@@ -21,7 +21,7 @@ With the implementation of different pressure-energy density equation of states 
 
 ## Installation
 
-You might want to create a virtual environment (`v_env`) where install the package:
+You might want to create a virtual environment (`venv`) where install the package:
 
 1. `python3 -m venv venv` (Linux) or `python -m venv venv` (Win)
 
