@@ -18,6 +18,7 @@ G_CGS = G_SI*1000
 MSUN_SI = astropy.constants.M_sun.value  #kg
 MSUN_CGS = MSUN_SI*1000 #g
 HBAR_SI = hbar
+M_N = m_n
 
 
 

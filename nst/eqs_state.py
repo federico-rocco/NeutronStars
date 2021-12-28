@@ -5,9 +5,10 @@ Created on Fri Nov 19 12:13:14 2021
 @author: cosmo
 """
 
-#class Implicit:
-    
-from nst.utils import *
+
+import numpy as np
+import nst.utils as ut
+from nst.utils import cgs_geom_dictionary, eos_library, cubic_spline
 
 
    
@@ -190,7 +191,7 @@ class Piecewise:
 
         """    
         
-        self.kappas = [ (C_CGS**2)*(self.kappas[i]*cgs_geom_dictionary["cgs"]["lenght"]["m"]**(3*self.gammas[i] -1)
+        self.kappas = [ (ut.C_CGS**2)*(self.kappas[i]*cgs_geom_dictionary["cgs"]["lenght"]["m"]**(3*self.gammas[i] -1)
                                            *cgs_geom_dictionary["cgs"]["time"]["geom"]**(-2)
                                            *cgs_geom_dictionary["cgs"]["mass"]["geom"]**(1-self.gammas[i]) )
                             for i in range(len(self.kappas))]     
@@ -392,7 +393,7 @@ class Implicit:
         """
         
         self.kind = "PressureEnergyDensityImplicit"        
-        self.e0 = ((m_n**4)*(C_SI**5)/((np.pi**2)*(HBAR_SI**3)))*cgs_geom_dictionary['si']['energy_density']['geom']
+        self.e0 = ((ut.M_N**4)*(ut.C_SI**5)/((np.pi**2)*(ut.HBAR_SI**3)))*cgs_geom_dictionary["si"]["energy_density"]["geom"]
         self.density_from_pressure, self.pressure_from_density = self.interpolate_solution()
         self.eden_from_pressure = self.density_from_pressure
         
@@ -412,8 +413,9 @@ class Implicit:
 
         """
         
-        return (self.e0/8)*((2*x**3 + x)*np.sqrt(1.0 + x**2) - np.arcsinh(x))
-
+        imp_density = (self.e0/8)*((2*x**3 + x)*np.sqrt(1.0 + x**2) - np.arcsinh(x))
+        return imp_density
+    
 
 
     def implicit_pressure(self, x):
@@ -430,7 +432,8 @@ class Implicit:
 
         """
         
-        return (self.e0/24)*((2*x**3 - 3*x)*np.sqrt(1.0 + x**2) + 3*np.arcsinh(x))
+        imp_pressure = (self.e0/24)*((2*x**3 - 3*x)*np.sqrt(1.0 + x**2) + 3*np.arcsinh(x))
+        return imp_pressure
     
     
     
