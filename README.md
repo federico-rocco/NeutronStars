@@ -63,7 +63,7 @@ All these scripts produce:
 
 Except that for ReadNS, where the error is too big to be of some insterest, the solution of both Newton and Tolman-Oppenheimer-Volkoff equations is showed. In this way, the impact of the relativistic corrections is shown.
 
-To run tests:
+To run the example scripts:
 
 1. `cd nst/examples`
 
